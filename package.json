@@ -1,0 +1,23 @@
+{
+	"name": "local-research-buddy-tray",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"main": "main.js",
+	"scripts": {
+		"start": "electron ."
+	},
+	"dependencies": {
+		"canvas": "^3.2.0",
+		"csv-parse": "^6.1.0",
+		"dotenv": "^16.4.5",
+		"fast-glob": "^3.3.3",
+		"mammoth": "^1.10.0",
+		"openai": "^4.56.0",
+		"pdf-parse": "^1.1.1",
+		"pdfjs-dist": "^3.4.120"
+	},
+	"devDependencies": {
+		"electron": "^30.5.1"
+	}
+}

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			http-equiv="Content-Security-Policy"
+			content="default-src 'self'; style-src 'self' 'unsafe-inline'"
+		/>
+		<title>Local Research Buddy</title>
+		<style>
+			:root {
+				--bg: #0a0b10;
+				--fg: #e9ecf4;
+				--muted: #98a2b3;
+				--glow-1: #7c4dff;
+				--glow-2: #18e3c8;
+				--glow-3: #ff7ab6;
+				--chip: #111524;
+				--chip-b: #20263a;
+				--border: #1a2032;
+				--accent: #8bd3ff;
+				--accent-2: #7cf2c2;
+				--btn-bg: #0f1a34;
+				--btn-border: #29407a;
+				--btn-text: #eaf3ff;
+				--btn-bg-hover: #112046;
+				color-scheme: dark;
+			}
+			
+			/* Mode-specific color themes */
+			[data-mode="summarizer"] {
+				--accent: #8bd3ff;
+				--accent-2: #7cf2c2;
+				--btn-bg: #0f1a34;
+				--btn-border: #29407a;
+				--eye-color: #8bd3ff;
+			}
+			
+			[data-mode="email"] {
+				--accent: #ff9f43;
+				--accent-2: #feca57;
+				--btn-bg: #2d1810;
+				--btn-border: #7a4f29;
+				--eye-color: #ff9f43;
+			}
+			
+			[data-mode="analyzer"] {
+				--accent: #a55eea;
+				--accent-2: #d63384;
+				--btn-bg: #1a0f2e;
+				--btn-border: #4c2a7a;
+				--eye-color: #a55eea;
+			}
+			
+			[data-mode="generator"] {
+				--accent: #26de81;
+				--accent-2: #2bcf7f;
+				--btn-bg: #0a1f0f;
+				--btn-border: #2d7a3d;
+				--eye-color: #26de81;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			html,
+			body {
+				height: 100%;
+			}
+			body {
+				margin: 0;
+				background: transparent;
+				color: var(--fg);
+				font: 14px/1.45 Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+					sans-serif;
+				display: grid;
+				place-items: center;
+				padding: 8px;
+			}
+			.bot {
+				width: 480px;
+				max-width: 92vw;
+				background: linear-gradient(180deg, #0f1322, #0b0f1b);
+				border-radius: 24px;
+				position: relative;
+				box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+				transition: box-shadow 0.18s ease, transform 0.08s ease;
+			}
+			.bot:hover {
+				box-shadow: 0 16px 58px rgba(0, 0, 0, 0.52);
+			}
+			.head {
+				-webkit-app-region: drag;
+				padding: 8px 10px 0;
+				display: flex;
+				justify-content: center;
+				position: relative;
+			}
+			.face {
+				width: 160px;
+				height: 80px;
+				background: radial-gradient(120px 60px at 50% 40%, #0e1426, #0a1120);
+				border-radius: 44px 44px 32px 32px;
+				outline: 1px solid rgba(28, 35, 64, 0.35);
+				box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35) inset,
+					0 1px 0 rgba(255, 255, 255, 0.03) inset;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 26px;
+				position: relative;
+			}
+			.eye {
+				width: 14px;
+				height: 14px;
+				border-radius: 50%;
+				background: radial-gradient(
+					8px 8px at 45% 35%,
+					var(--eye-color, #8bd3ff),
+					color-mix(in srgb, var(--eye-color, #8bd3ff) 80%, #ffffff),
+					color-mix(in srgb, var(--eye-color, #8bd3ff) 50%, #000000)
+				);
+				box-shadow: 0 0 10px var(--eye-color, #8bd3ff),
+					0 0 24px color-mix(in srgb, var(--eye-color, #8bd3ff) 60%, transparent);
+				animation: blink 6s infinite;
+			}
+			.eye.right {
+				animation-delay: 0.2s;
+			}
+			@keyframes blink {
+				0%,
+				7%,
+				100% {
+					transform: scaleY(1);
+				}
+				3% {
+					transform: scaleY(0.08);
+				}
+			}
+			.antenna {
+				position: absolute;
+				top: -10px;
+				left: 50%;
+				transform: translateX(-50%);
+				width: 38px;
+				height: 12px;
+				border-radius: 8px 8px 0 0;
+				background: linear-gradient(180deg, #141b33, #0f162a);
+				outline: 1px solid rgba(28, 35, 64, 0.35);
+			}
+			.win-controls {
+				position: absolute;
+				right: 10px;
+				top: 10px;
+				display: flex;
+				gap: 6px;
+				-webkit-app-region: no-drag;
+			}
+			.ctrl {
+				width: 24px;
+				height: 24px;
+				border-radius: 7px;
+				border: 1px solid #253055;
+				background: #121a33;
+				color: #c9d3ff;
+				cursor: pointer;
+				box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+				font-weight: 700;
+				line-height: 1;
+				user-select: none;
+				-webkit-user-select: none;
+			}
+			.ctrl:hover {
+				filter: brightness(1.12);
+			}
+			.ctrl.close {
+				border-color: #4a2540;
+				color: #ffd6e8;
+				background: #1c0f19;
+			}
+			.ctrl.active {
+				background: #10263a;
+				border-color: #2b6a74;
+				color: #a8ffef;
+				box-shadow: 0 0 0 1px rgba(124, 242, 194, 0.15) inset;
+			}
+			.body {
+				padding: 10px 12px 12px;
+			}
+			.row {
+				display: flex;
+				gap: 8px;
+				align-items: center;
+			}
+			.col {
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+			label.small {
+				font-size: 12px;
+				color: var(--muted);
+			}
+			textarea,
+			input[type="text"] {
+				width: 100%;
+				background: #0c1224;
+				color: #e9ecf4 !important;
+				caret-color: #e9ecf4;
+				border: 1px solid #1a223b;
+				border-radius: 10px;
+				padding: 8px 10px;
+				outline: none;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				overflow: hidden;
+			}
+			textarea {
+				min-height: 78px;
+				resize: vertical;
+			}
+			textarea:focus,
+			input[type="text"]:focus {
+				border-color: #25407a;
+				box-shadow: 0 0 0 2px rgba(139, 211, 255, 0.18) inset;
+			}
+			textarea::placeholder,
+			input[type="text"]::placeholder {
+				color: var(--muted);
+				opacity: 1;
+			}
+			#dir[readonly] {
+				background: #0b1222;
+				border-color: #15203a;
+			}
+			.mode-selector {
+				display: flex;
+				justify-content: space-between;
+				gap: 4px;
+				margin-bottom: 16px;
+				padding: 8px 12px;
+				background: rgba(17, 21, 36, 0.4);
+				border-radius: 16px;
+				border: 1px solid rgba(26, 32, 50, 0.6);
+			}
+			.mode-option {
+				cursor: pointer;
+				flex: 1;
+			}
+			.mode-option input[type="radio"] {
+				display: none;
+			}
+			.mode-item {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				padding: 12px 4px 8px;
+				border-radius: 12px;
+				transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+				text-align: center;
+				position: relative;
+			}
+			.mode-option input[type="radio"]:checked + .mode-item {
+				background: var(--btn-bg);
+				transform: translateY(-2px);
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15),
+							0 0 0 1px var(--accent) inset;
+			}
+			.mode-item:hover {
+				background: rgba(17, 21, 36, 0.6);
+				transform: translateY(-1px);
+			}
+			.mode-option input[type="radio"]:checked + .mode-item:hover {
+				transform: translateY(-2px);
+			}
+			.mode-icon {
+				font-size: 28px;
+				margin-bottom: 6px;
+				opacity: 0.7;
+				transition: all 0.25s ease;
+			}
+			.mode-option input[type="radio"]:checked + .mode-item .mode-icon {
+				opacity: 1;
+				filter: drop-shadow(0 0 8px var(--accent));
+				transform: scale(1.05);
+			}
+			.mode-title {
+				font-size: 10px;
+				font-weight: 600;
+				color: var(--muted);
+				transition: color 0.25s ease;
+				letter-spacing: 0.02em;
+			}
+			.mode-option input[type="radio"]:checked + .mode-item .mode-title {
+				color: var(--fg);
+			}
+			.chips {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+			}
+			.chip {
+				background: var(--chip);
+				border: 1px solid var(--chip-b);
+				color: var(--fg);
+				padding: 6px 10px;
+				border-radius: 999px;
+				font-size: 12px;
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+			}
+			.chip input {
+				accent-color: var(--accent);
+			}
+			details#options {
+				margin-top: 2px;
+			}
+			details#options > summary {
+				cursor: pointer;
+				list-style: none;
+				color: var(--muted);
+				padding: 4px 0;
+			}
+			details#options[open] > summary {
+				color: var(--fg);
+			}
+			.actions {
+				display: flex;
+				gap: 8px;
+				align-items: center;
+				margin-top: 6px;
+			}
+			.btn {
+				padding: 9px 12px;
+				border-radius: 12px;
+				cursor: pointer;
+				border: 1px solid var(--btn-border);
+				background: var(--btn-bg);
+				color: var(--btn-text);
+				font-weight: 600;
+				font-size: 13.5px;
+			}
+			.btn:hover {
+				background: var(--btn-bg-hover);
+				filter: brightness(1.06);
+			}
+			.btn.primary {
+				background: linear-gradient(180deg, #1b2e63, #162552 60%, #121d3f);
+				border-color: #2a478a;
+			}
+			.btn.round {
+				border-radius: 999px;
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+			}
+			.btn .dot {
+				width: 10px;
+				height: 10px;
+				border-radius: 50%;
+				background: radial-gradient(circle, #9af7d6, #5fe9cf 60%, #2bc19b);
+				box-shadow: 0 0 12px rgba(95, 233, 207, 0.7),
+					0 0 24px rgba(124, 77, 255, 0.3);
+			}
+			.status {
+				margin-left: auto;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				color: var(--muted);
+				font-size: 12px;
+			}
+			.spin {
+				width: 13px;
+				height: 13px;
+				border: 2px solid #26345c;
+				border-top-color: var(--accent);
+				border-radius: 50%;
+				animation: spin 1s linear infinite;
+				display: none;
+			}
+			.spin.show {
+				display: inline-block;
+			}
+			@keyframes spin {
+				to {
+					transform: rotate(360deg);
+				}
+			}
+			.toolbar {
+				display: flex;
+				gap: 8px;
+				justify-content: flex-end;
+				margin: 0 12px 6px;
+			}
+			.ghost {
+				background: transparent;
+				border: 1px dashed #2a355f;
+				color: var(--btn-text);
+			}
+			.output {
+				margin: 8px 12px 12px;
+				padding: 12px;
+				border-radius: 12px;
+				background: linear-gradient(180deg, #0e1322, #0a0f1d);
+				border: 1px solid #182040;
+				min-height: 120px;
+				white-space: pre-wrap;
+				overflow: auto;
+				box-shadow: inset 0 0 0 1px rgba(139, 211, 255, 0.06);
+				color: var(--fg);
+				font-size: 14px;
+				line-height: 1.55;
+				-webkit-font-smoothing: antialiased;
+			}
+			.output,
+			.output * {
+				color: #e9ecf4 !important;
+			}
+			.summary-force {
+				color: #e9ecf4 !important;
+			}
+			.footer {
+				color: var(--muted);
+				display: flex;
+				justify-content: space-between;
+				padding: 0 12px 12px;
+				font-size: 12px;
+			}
+			.kbd {
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 11px;
+				padding: 2px 6px;
+				border: 1px solid #27335a;
+				border-radius: 6px;
+				color: var(--muted);
+			}
+			.hidden {
+				display: none !important;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="bot">
+			<div class="head">
+				<div class="antenna"></div>
+				<div class="face">
+					<div class="eye left"></div>
+					<div class="eye right"></div>
+				</div>
+				<div class="win-controls">
+					<button
+						id="minBtn"
+						class="ctrl"
+						type="button"
+						aria-label="Minimize"
+						title="Minimize"
+					>
+						–
+					</button>
+					<button
+						id="pinBtn"
+						class="ctrl"
+						type="button"
+						aria-label="Pin on top"
+						title="Pin on top"
+					>
+						📌
+					</button>
+					<button
+						id="closeBtn"
+						class="ctrl close"
+						type="button"
+						aria-label="Close"
+						title="Close"
+					>
+						×
+					</button>
+				</div>
+			</div>
+			<div id="controls" class="body">
+				<div class="col">
+					<div class="mode-selector">
+						<label class="mode-option">
+							<input type="radio" name="mode" value="summarizer" checked />
+							<span class="mode-item">
+								<div class="mode-icon">📄</div>
+								<div class="mode-title">Summarizer</div>
+							</span>
+						</label>
+						<label class="mode-option">
+							<input type="radio" name="mode" value="email" />
+							<span class="mode-item">
+								<div class="mode-icon">✉️</div>
+								<div class="mode-title">Email Writer</div>
+							</span>
+						</label>
+						<label class="mode-option">
+							<input type="radio" name="mode" value="analyzer" />
+							<span class="mode-item">
+								<div class="mode-icon">🔍</div>
+								<div class="mode-title">Analyzer</div>
+							</span>
+						</label>
+						<label class="mode-option">
+							<input type="radio" name="mode" value="generator" />
+							<span class="mode-item">
+								<div class="mode-icon">⚡</div>
+								<div class="mode-title">Generator</div>
+							</span>
+						</label>
+					</div>
+					<label class="small">Your prompt</label>
+					<textarea
+						id="prompt"
+						placeholder="e.g., Summarize key themes and list top 5 findings with citations."
+					></textarea>
+					<label class="small">Directory</label>
+					<div class="row">
+						<input
+							id="dir"
+							type="text"
+							placeholder="Select a folder…"
+							readonly
+						/>
+						<button id="browse" class="btn" type="button">Browse</button>
+					</div>
+					<details id="options">
+						<summary>Options</summary>
+						<div class="chips" style="margin-top: 6px">
+							<label class="chip"
+								><input id="includePdf" type="checkbox" checked /> PDFs</label
+							>
+							<label class="chip"
+								><input id="includeDocx" type="checkbox" checked /> DOCX</label
+							>
+							<label class="chip"
+								><input id="includeCsv" type="checkbox" checked /> CSV</label
+							>
+							<label class="chip"
+								><input id="includeMd" type="checkbox" checked /> MD/TXT</label
+							>
+						</div>
+					</details>
+					<div class="actions">
+						<button id="run" class="btn primary round" type="button">
+							<span class="dot"></span> Summarize
+						</button>
+						<div class="status">
+							<div id="spinner" class="spin"></div>
+							<span id="status">Idle</span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="summarySection" class="hidden">
+				<div class="toolbar">
+					<button
+						id="back"
+						class="btn ghost"
+						type="button"
+						title="Back to edit"
+					>
+						← Back
+					</button>
+					<div style="flex: 1"></div>
+					<button
+						id="copy"
+						class="btn ghost"
+						type="button"
+						title="Copy to clipboard"
+					>
+						Copy
+					</button>
+					<button
+						id="export"
+						class="btn ghost"
+						type="button"
+						title="Export as Markdown"
+					>
+						Export .md
+					</button>
+				</div>
+				<div id="out" class="output"></div>
+				<div class="footer">
+					<div>
+						Tip: <span class="kbd">⌘</span><span class="kbd">Enter</span> (or
+						Ctrl+Enter) to run
+					</div>
+					<div>v0.1</div>
+				</div>
+			</div>
+		</div>
+		<script type="module" src="./renderer.js"></script>
+	</body>
+</html>
