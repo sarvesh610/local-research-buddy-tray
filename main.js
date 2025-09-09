@@ -154,6 +154,7 @@ ipcMain.handle("pick-dir", async () => {
 });
 
 import { summarizeDirectory } from "./summarizer.js";
+import { runAgent } from "./agent/agent.js";
 
 ipcMain.handle("run-summary", async (_evt, payload) => {
 	const { dirPath, userPrompt, options } = payload || {};
@@ -183,6 +184,57 @@ ipcMain.handle("run-summary", async (_evt, payload) => {
 		console.timeEnd("[ipc] run-summary time");
 		console.error("run-summary error:", err);
 		return { ok: false, error: err?.message || String(err) };
+	}
+});
+
+ipcMain.handle("agent:run", async (_evt, payload) => {
+	const { dirPath, userPrompt, maxSteps = 6 } = payload || {};
+	console.log("[ipc] agent:run payload:", {
+		dirPath,
+		userPromptLen: (userPrompt || "").length,
+		maxSteps,
+	});
+	console.time("[ipc] agent:run time");
+	
+	try {
+		const messages = [
+			{ 
+				role: 'user', 
+				content: `Task: ${userPrompt || 'Analyze this directory for key themes and findings.'}
+Directory: ${dirPath || 'Not specified'}
+
+If the directory is provided, you can use tools like list_files, read_text, or summarize_dir. 
+Provide a final answer with specific citations and actionable insights.` 
+			}
+		];
+
+		const result = await runAgent({ 
+			messages, 
+			maxSteps 
+		});
+		
+		console.log("[ipc] agent:run result meta:", {
+			ok: result?.ok,
+			steps: result?.steps,
+			finalLength: (result?.final || "").length,
+		});
+		console.timeEnd("[ipc] agent:run time");
+		
+		return { 
+			ok: result.ok,
+			output: result.final || "No final answer provided.",
+			steps: result.steps,
+			fileCount: 0 // Agents don't have a fixed file count
+		};
+	} catch (err) {
+		console.timeEnd("[ipc] agent:run time");
+		console.error("agent:run error:", err);
+		return { 
+			ok: false, 
+			error: err?.message || String(err),
+			output: "",
+			steps: 0
+		};
 	}
 });
 

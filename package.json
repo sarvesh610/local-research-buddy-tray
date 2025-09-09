@@ -4,9 +4,11 @@
 	"private": true,
 	"type": "module",
 	"main": "main.js",
-	"scripts": {
-		"start": "electron ."
-	},
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder -m"
+  },
 	"dependencies": {
 		"canvas": "^3.2.0",
 		"csv-parse": "^6.1.0",
@@ -17,7 +19,35 @@
 		"pdf-parse": "^1.1.1",
 		"pdfjs-dist": "^3.4.120"
 	},
-	"devDependencies": {
-		"electron": "^30.5.1"
-	}
+  "devDependencies": {
+    "electron": "^30.5.1",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.localresearchbuddy.tray",
+    "productName": "Local Research Buddy",
+    "files": [
+      "*.js",
+      "*.cjs",
+      "*.html",
+      "agent/**/*",
+      "js/**/*",
+      "*.png",
+      "package.json",
+      "!**/*.map",
+      "!**/test/**"
+    ],
+    "asar": true,
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.productivity"
+    },
+    "dmg": {
+      "iconSize": 128,
+      "contents": [
+        { "x": 130, "y": 220, "type": "file" },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    }
+  }
 }

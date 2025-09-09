@@ -2,12 +2,16 @@
 <html>
 	<head>
 		<meta charset="utf-8" />
-		<meta
-			http-equiv="Content-Security-Policy"
-			content="default-src 'self'; style-src 'self' 'unsafe-inline'"
-		/>
-		<title>Local Research Buddy</title>
-		<style>
+    <meta
+            http-equiv="Content-Security-Policy"
+            content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
+        />
+    <title>Local Research Buddy</title>
+    <!-- Sci‑fi font: Orbitron -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
 			:root {
 				--bg: #0a0b10;
 				--fg: #e9ecf4;
@@ -59,6 +63,30 @@
 				--btn-border: #2d7a3d;
 				--eye-color: #26de81;
 			}
+			
+			[data-mode="security"] {
+				--accent: #ff6b6b;
+				--accent-2: #ff5252;
+				--btn-bg: #2d0f0f;
+				--btn-border: #7a2d2d;
+				--eye-color: #ff6b6b;
+			}
+			
+			[data-mode="health"] {
+				--accent: #4ecdc4;
+				--accent-2: #44a08d;
+				--btn-bg: #0f2d2a;
+				--btn-border: #2d7a70;
+				--eye-color: #4ecdc4;
+			}
+			
+			[data-mode="agent"] {
+				--accent: #9333ea;
+				--accent-2: #a855f7;
+				--btn-bg: #1a0b2e;
+				--btn-border: #4c1d95;
+				--eye-color: #9333ea;
+			}
 			* {
 				box-sizing: border-box;
 			}
@@ -66,16 +94,15 @@
 			body {
 				height: 100%;
 			}
-			body {
-				margin: 0;
-				background: transparent;
-				color: var(--fg);
-				font: 14px/1.45 Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
-					sans-serif;
-				display: grid;
-				place-items: center;
-				padding: 8px;
-			}
+            body {
+                margin: 0;
+                background: transparent;
+                color: var(--fg);
+                font: 13.5px/1.5 'Orbitron', 'Aldrich', 'Share Tech Mono', -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+                display: grid;
+                place-items: center;
+                padding: 8px;
+            }
 			.bot {
 				width: 480px;
 				max-width: 92vw;
@@ -235,9 +262,9 @@
 			.mode-selector {
 				display: flex;
 				justify-content: space-between;
-				gap: 4px;
+				gap: 2px;
 				margin-bottom: 16px;
-				padding: 8px 12px;
+				padding: 8px 10px;
 				background: rgba(17, 21, 36, 0.4);
 				border-radius: 16px;
 				border: 1px solid rgba(26, 32, 50, 0.6);
@@ -258,10 +285,13 @@
 				transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 				text-align: center;
 				position: relative;
+				/* Ensure equal tile height across modes */
+				min-height: 90px;
 			}
 			.mode-option input[type="radio"]:checked + .mode-item {
 				background: var(--btn-bg);
-				transform: translateY(-2px);
+				/* Keep aligned height across modes */
+				transform: none;
 				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15),
 							0 0 0 1px var(--accent) inset;
 			}
@@ -277,19 +307,67 @@
 				margin-bottom: 6px;
 				opacity: 0.7;
 				transition: all 0.25s ease;
+				/* Normalize icon box for emoji and SVG */
+				width: 28px;
+				height: 28px;
+				display: grid;
+				place-items: center;
+				line-height: 28px;
 			}
-			.mode-option input[type="radio"]:checked + .mode-item .mode-icon {
-				opacity: 1;
-				filter: drop-shadow(0 0 8px var(--accent));
-				transform: scale(1.05);
-			}
-			.mode-title {
-				font-size: 10px;
-				font-weight: 600;
-				color: var(--muted);
-				transition: color 0.25s ease;
-				letter-spacing: 0.02em;
-			}
+            .mode-option input[type="radio"]:checked + .mode-item .mode-icon {
+                opacity: 1;
+                filter: drop-shadow(0 0 8px var(--accent));
+                transform: scale(1.05);
+            }
+            /* Agent icon (inline SVG) styling */
+            .mode-icon svg {
+                width: 28px;
+                height: 28px;
+                display: block;
+            }
+            .agent-icon .ring { stroke: var(--accent); stroke-width: 1.6; fill: none; opacity: 0.9; }
+            .agent-icon .ticks { stroke: var(--accent-2); stroke-width: 1.6; stroke-linecap: round; opacity: 0.9; }
+            .agent-icon .dot { fill: var(--accent); opacity: 0.95; }
+            @keyframes agentPulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+            .mode-option input[type="radio"]:checked + .mode-item .agent-icon .dot { animation: agentPulse 1.8s ease-in-out infinite; }
+            /* Folder icon styling */
+            .folder-icon .body { fill: none; stroke: var(--accent); stroke-width: 1.6; opacity: 0.95; }
+            .folder-icon .tab { fill: none; stroke: var(--accent-2); stroke-width: 1.6; opacity: 0.9; }
+            .folder-icon .lines { stroke: var(--accent-2); stroke-width: 1.4; stroke-linecap: round; opacity: 0.9; }
+            /* Health icon styling */
+            .health-icon .ring { fill: none; stroke: var(--accent); stroke-width: 1.6; opacity: 0.95; }
+            .health-icon .heart { fill: none; stroke: var(--accent-2); stroke-width: 1.6; stroke-linecap: round; }
+            .health-icon .pulse { fill: none; stroke: var(--accent-2); stroke-width: 1.4; stroke-linecap: round; }
+
+            /* Output scanline overlay for Agent while running */
+            .output.scanlines { position: relative; overflow: hidden; }
+            .output.scanlines::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: repeating-linear-gradient(
+                  to bottom,
+                  rgba(147, 51, 234, 0.05),
+                  rgba(147, 51, 234, 0.05) 2px,
+                  transparent 2px,
+                  transparent 6px
+                );
+                mix-blend-mode: screen;
+                pointer-events: none;
+                animation: scanMove 4s linear infinite;
+            }
+            @keyframes scanMove {
+                0% { transform: translateY(-10%); }
+                100% { transform: translateY(10%); }
+            }
+            .mode-title {
+                font-size: 10px;
+                font-weight: 700;
+                color: var(--muted);
+                transition: color 0.25s ease;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
 			.mode-option input[type="radio"]:checked + .mode-item .mode-title {
 				color: var(--fg);
 			}
@@ -427,13 +505,338 @@
 				padding: 0 12px 12px;
 				font-size: 12px;
 			}
-			.kbd {
-				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-				font-size: 11px;
-				padding: 2px 6px;
-				border: 1px solid #27335a;
-				border-radius: 6px;
+            .kbd {
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                font-size: 11px;
+                padding: 2px 6px;
+                border: 1px solid #27335a;
+                border-radius: 6px;
+                color: var(--muted);
+            }
+
+            /* Agent-only demo: other modes commented in HTML for reuse later */
+			.security-dashboard {
+				margin-bottom: 16px;
+				padding: 16px;
+				background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(255, 82, 82, 0.05));
+				border: 1px solid rgba(255, 107, 107, 0.2);
+				border-radius: 12px;
+			}
+			.security-score {
+				display: flex;
+				align-items: center;
+				gap: 20px;
+				justify-content: center;
+			}
+			.score-circle {
+				position: relative;
+				width: 80px;
+				height: 80px;
+				border-radius: 50%;
+				background: conic-gradient(
+					from 0deg,
+					var(--accent) 0deg,
+					var(--accent) calc(var(--score, 50) * 3.6deg),
+					rgba(255, 255, 255, 0.1) calc(var(--score, 50) * 3.6deg),
+					rgba(255, 255, 255, 0.1) 360deg
+				);
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+			}
+			.score-circle::before {
+				content: '';
+				position: absolute;
+				width: 60px;
+				height: 60px;
+				background: var(--bg);
+				border-radius: 50%;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+			}
+			.score-value {
+				position: relative;
+				z-index: 2;
+				font-size: 18px;
+				font-weight: 700;
+				color: var(--accent);
+			}
+			.score-label {
+				position: relative;
+				z-index: 2;
+				font-size: 9px;
 				color: var(--muted);
+				margin-top: -2px;
+			}
+			.risk-level {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+			}
+			.risk-badge {
+				padding: 6px 12px;
+				border-radius: 20px;
+				font-size: 12px;
+				font-weight: 600;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+			.risk-badge.low {
+				background: rgba(38, 222, 129, 0.2);
+				color: #26de81;
+				border: 1px solid rgba(38, 222, 129, 0.3);
+			}
+			.risk-badge.medium {
+				background: rgba(255, 159, 67, 0.2);
+				color: #ff9f43;
+				border: 1px solid rgba(255, 159, 67, 0.3);
+			}
+			.risk-badge.high {
+				background: rgba(255, 107, 107, 0.2);
+				color: #ff6b6b;
+				border: 1px solid rgba(255, 107, 107, 0.3);
+			}
+			.security-score.low .score-circle {
+				--score: var(--security-score, 85);
+			}
+			.security-score.medium .score-circle {
+				--score: var(--security-score, 65);
+			}
+			.security-score.high .score-circle {
+				--score: var(--security-score, 35);
+			}
+			
+			/* Health Dashboard Styles - Compact Version */
+			.health-dashboard {
+				margin-bottom: 12px;
+				padding: 12px;
+				background: linear-gradient(135deg, rgba(255, 111, 97, 0.1), rgba(255, 111, 97, 0.05));
+				border: 1px solid rgba(255, 111, 97, 0.2);
+				border-radius: 8px;
+			}
+			.health-metrics {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 10px;
+				margin-bottom: 16px;
+			}
+			.health-metric {
+				background: rgba(255, 255, 255, 0.12);
+				border: 1px solid rgba(255, 255, 255, 0.2);
+				border-radius: 12px;
+				padding: 16px 14px;
+				text-align: left;
+				min-height: 70px;
+				display: flex;
+				flex-direction: column;
+				justify-content: space-between;
+				transition: all 0.2s ease;
+			}
+			.health-metric:hover {
+				background: rgba(255, 255, 255, 0.15);
+				transform: translateY(-1px);
+			}
+			.metric-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: flex-start;
+				margin-bottom: 6px;
+			}
+			.metric-icon {
+				font-size: 16px;
+				opacity: 0.9;
+			}
+			.metric-trend {
+				font-size: 9px;
+				color: #4ade80;
+				font-weight: 600;
+				background: rgba(74, 222, 128, 0.15);
+				padding: 2px 6px;
+				border-radius: 8px;
+			}
+			.metric-value {
+				font-size: 20px;
+				font-weight: 700;
+				color: var(--fg);
+				margin: 2px 0;
+				line-height: 1.1;
+			}
+			.metric-label {
+				font-size: 10px;
+				color: var(--muted);
+				font-weight: 500;
+				opacity: 0.8;
+			}
+			.recovery-status {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				margin-bottom: 14px;
+				padding: 12px 16px;
+				background: rgba(255, 255, 255, 0.08);
+				border: 1px solid rgba(255, 255, 255, 0.15);
+				border-radius: 12px;
+			}
+			.recovery-circle {
+				width: 40px;
+				height: 40px;
+				border-radius: 50%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 18px;
+				flex-shrink: 0;
+			}
+			.recovery-circle.green {
+				background: rgba(38, 222, 129, 0.2);
+				border: 2px solid #26de81;
+				color: #26de81;
+			}
+			.recovery-circle.yellow {
+				background: rgba(255, 159, 67, 0.2);
+				border: 2px solid #ff9f43;
+				color: #ff9f43;
+			}
+			.recovery-circle.red {
+				background: rgba(255, 107, 107, 0.2);
+				border: 2px solid #ff6b6b;
+				color: #ff6b6b;
+			}
+			.recovery-info {
+				text-align: left;
+				flex: 1;
+			}
+			.recovery-level {
+				font-size: 13px;
+				font-weight: 600;
+				color: var(--fg);
+			}
+			.recovery-subtitle {
+				font-size: 10px;
+				color: var(--muted);
+				margin-top: 2px;
+			}
+			.recovery-subtitle strong {
+				font-weight: 700;
+				color: var(--fg);
+			}
+			.health-section {
+				background: rgba(255, 255, 255, 0.08);
+				border: 1px solid rgba(255, 255, 255, 0.15);
+				border-radius: 12px;
+				padding: 12px;
+				margin-bottom: 10px;
+			}
+			.section-title {
+				font-size: 11px;
+				color: var(--muted);
+				font-weight: 600;
+				margin-bottom: 8px;
+			}
+			.sleep-stages {
+				display: flex;
+				gap: 2px;
+				align-items: end;
+				height: 32px;
+				margin-bottom: 6px;
+			}
+			.sleep-bar {
+				flex: 1;
+				border-radius: 1px;
+				min-height: 3px;
+			}
+			.sleep-bar.deep { background: #4834d4; }
+			.sleep-bar.light { background: #a55eea; }
+			.sleep-bar.rem { background: #ff9ff3; }
+			.sleep-bar.awake { background: #ff6b6b; }
+			.sleep-legend {
+				display: flex;
+				gap: 6px;
+				font-size: 7px;
+				color: var(--muted);
+				margin-top: 3px;
+				justify-content: center;
+			}
+			.legend-item {
+				display: flex;
+				align-items: center;
+				gap: 2px;
+			}
+			.legend-dot {
+				width: 4px;
+				height: 4px;
+				border-radius: 50%;
+			}
+			.trend-chart {
+				height: 24px;
+				background: rgba(255, 255, 255, 0.03);
+				border-radius: 3px;
+				padding: 4px;
+				display: flex;
+				align-items: end;
+				gap: 1px;
+			}
+			.trend-bar {
+				flex: 1;
+				background: linear-gradient(to top, var(--accent), rgba(255, 111, 97, 0.6));
+				border-radius: 1px;
+				min-height: 2px;
+			}
+			.daily-card {
+				background: linear-gradient(135deg, var(--accent), rgba(255, 111, 97, 0.8));
+				color: white;
+				padding: 8px;
+				border-radius: 6px;
+				margin-bottom: 8px;
+				font-size: 11px;
+				font-weight: 500;
+				line-height: 1.3;
+				text-align: left;
+			}
+			
+			/* Structured Output Styling */
+			.health-output {
+				padding: 0;
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+			}
+			.health-plan-section {
+				margin-bottom: 16px;
+				background: rgba(255, 255, 255, 0.03);
+				border-radius: 6px;
+				padding: 10px;
+			}
+			.health-plan-title {
+				font-size: 13px;
+				font-weight: 700;
+				color: var(--accent);
+				margin-bottom: 8px;
+				display: flex;
+				align-items: center;
+				gap: 6px;
+			}
+			.health-table {
+				width: 100%;
+				border-collapse: collapse;
+				margin-top: 6px;
+				font-size: 10px;
+			}
+			.health-table th {
+				background: rgba(255, 255, 255, 0.1);
+				padding: 6px 8px;
+				text-align: left;
+				font-weight: 600;
+				color: var(--fg);
+				border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+			}
+			.health-table td {
+				padding: 6px 8px;
+				border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+				color: var(--muted);
+			}
+			.health-table tr:hover {
+				background: rgba(255, 255, 255, 0.02);
 			}
 			.hidden {
 				display: none !important;
@@ -479,37 +882,49 @@
 				</div>
 			</div>
 			<div id="controls" class="body">
-				<div class="col">
-					<div class="mode-selector">
-						<label class="mode-option">
-							<input type="radio" name="mode" value="summarizer" checked />
-							<span class="mode-item">
-								<div class="mode-icon">📄</div>
-								<div class="mode-title">Summarizer</div>
-							</span>
-						</label>
-						<label class="mode-option">
-							<input type="radio" name="mode" value="email" />
-							<span class="mode-item">
-								<div class="mode-icon">✉️</div>
-								<div class="mode-title">Email Writer</div>
-							</span>
-						</label>
-						<label class="mode-option">
-							<input type="radio" name="mode" value="analyzer" />
-							<span class="mode-item">
-								<div class="mode-icon">🔍</div>
-								<div class="mode-title">Analyzer</div>
-							</span>
-						</label>
-						<label class="mode-option">
-							<input type="radio" name="mode" value="generator" />
-							<span class="mode-item">
-								<div class="mode-icon">⚡</div>
-								<div class="mode-title">Generator</div>
-							</span>
-						</label>
-					</div>
+                <div class="col">
+                    <div class="mode-selector">
+                        <label class="mode-option">
+                            <input type="radio" name="mode" value="summarizer" />
+                            <span class="mode-item">
+                                <div class="mode-icon">
+                                    <svg viewBox="0 0 24 24" class="folder-icon" aria-hidden="true">
+                                        <path class="body" d="M3 7h7l2 2h9v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
+                                        <path class="tab" d="M3 7h7l1.2 1.2"/>
+                                        <path class="lines" d="M7 13h6M7 16h10"/>
+                                    </svg>
+                                </div>
+                                <div class="mode-title">Folder Analyzer</div>
+                            </span>
+                        </label>
+                        <!-- Hidden modes kept for reuse: Email, Generator, Security -->
+                        <label class="mode-option">
+                            <input type="radio" name="mode" value="health" />
+                            <span class="mode-item">
+                                <div class="mode-icon">
+                                    <svg viewBox="0 0 24 24" class="health-icon" aria-hidden="true">
+                                        <circle cx="12" cy="12" r="9" class="ring" />
+                                        <path class="heart" d="M12 17s-4.5-2.7-5.8-5.1C4.4 9.5 5.5 7 7.7 7c1.3 0 2.1.7 2.6 1.4.5-.7 1.3-1.4 2.6-1.4 2.2 0 3.3 2.5 1.5 4.9C16.5 14.3 12 17 12 17z"/>
+                                        <path class="pulse" d="M4 12h3l2-3 2 6 2-4 1 1h4"/>
+                                    </svg>
+                                </div>
+                                <div class="mode-title">Health</div>
+                            </span>
+                        </label>
+                        <label class="mode-option">
+                            <input type="radio" name="mode" value="agent" checked />
+                            <span class="mode-item">
+                                <div class="mode-icon">
+                                    <svg viewBox="0 0 24 24" class="agent-icon" aria-hidden="true">
+                                        <circle cx="12" cy="12" r="9" class="ring" />
+                                        <circle cx="12" cy="12" r="2" class="dot" />
+                                        <path d="M12 3v2M12 19v2M3 12h2M19 12h2" class="ticks" />
+                                    </svg>
+                                </div>
+                                <div class="mode-title">Agent</div>
+                            </span>
+                        </label>
+                    </div>
 					<label class="small">Your prompt</label>
 					<textarea
 						id="prompt"
@@ -525,23 +940,15 @@
 						/>
 						<button id="browse" class="btn" type="button">Browse</button>
 					</div>
-					<details id="options">
-						<summary>Options</summary>
-						<div class="chips" style="margin-top: 6px">
-							<label class="chip"
-								><input id="includePdf" type="checkbox" checked /> PDFs</label
-							>
-							<label class="chip"
-								><input id="includeDocx" type="checkbox" checked /> DOCX</label
-							>
-							<label class="chip"
-								><input id="includeCsv" type="checkbox" checked /> CSV</label
-							>
-							<label class="chip"
-								><input id="includeMd" type="checkbox" checked /> MD/TXT</label
-							>
-						</div>
-					</details>
+                    <details id="options">
+                        <summary>Options</summary>
+                        <div class="chips" style="margin-top: 6px">
+                            <label class="chip"><input id="includePdf" type="checkbox" checked /> PDFs</label>
+                            <label class="chip"><input id="includeDocx" type="checkbox" checked /> DOCX</label>
+                            <label class="chip"><input id="includeCsv" type="checkbox" checked /> CSV</label>
+                            <label class="chip"><input id="includeMd" type="checkbox" checked /> MD/TXT</label>
+                        </div>
+                    </details>
 					<div class="actions">
 						<button id="run" class="btn primary round" type="button">
 							<span class="dot"></span> Summarize
@@ -591,6 +998,6 @@
 				</div>
 			</div>
 		</div>
-		<script type="module" src="./renderer.js"></script>
+		<script type="module" src="./renderer-new.js"></script>
 	</body>
 </html>

@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import fg from "fast-glob";
 import OpenAI from "openai";
+import { gatherSystemInfo, analyzeSecurityRisks } from "./security-scanner.js";
+import { analyzeHealthData } from "./health-analyzer.js";
 
 // AI Provider Configuration - Ready for Qvac SDK
 const PROVIDER = process.env.AI_PROVIDER || "openai";
@@ -138,6 +140,14 @@ function getModePrompts(mode, userPrompt, docs) {
 		generator: {
 			system: "You are an expert software engineer. Generate clean, well-documented code based on requirements and reference materials.",
 			guidance: `Generate code based on the requirements below.\n\nUser request: ${userPrompt}\n\nReference materials:\n${headers}\n\nGenerate:\n- Clean, well-commented code\n- Follow best practices\n- Include usage examples if applicable\n- Explain key design decisions`
+		},
+		security: {
+			system: "You are a cybersecurity expert specializing in system security analysis and threat detection. Analyze system information for security vulnerabilities and provide actionable remediation advice.",
+			guidance: `Perform a comprehensive security analysis of the system information provided.\n\nUser request: ${userPrompt}\n\nSystem data to analyze:\n${headers}\n\nProvide:\n- Risk assessment with severity levels\n- Specific security vulnerabilities identified\n- Prioritized remediation steps\n- Security best practices recommendations\n- Compliance considerations\n- Overall security score and rationale`
+		},
+		health: {
+			system: "You are a health coach generating a 7-day sleep, training, and diet plan based on biometric data. Be specific but safe and realistic. Avoid medical claims.",
+			guidance: `Generate personalized health coaching based on the Fitbit data provided.\n\nUser request: ${userPrompt}\n\nHealth metrics to analyze:\n${headers}\n\nConstraints:\n- Be specific but safe and realistic\n- If recovery is yellow/red or sleep efficiency <85%, reduce intensity and prioritize sleep\n- Use defined blocks: Sleep Plan, Training Plan, Diet Plan, Daily Card (for today), and Why (brief rationale with the metrics you used)\n- Keep diet suggestions generic and culturally flexible. Avoid medical claims.\n\nOutput sections:\n1) Daily Card (today's priority action)\n2) 7-Day Sleep Plan (specific bedtime schedule with rationale)\n3) 7-Day Training Plan (auto-adjust intensity based on recovery)\n4) Diet Plan (calories/macros + 4-6 meal ideas)\n5) Why (list the specific metrics that drove each recommendation)`
 		}
 	};
 
@@ -229,9 +239,91 @@ export async function summarizeDirectory(
 	options = {}
 ) {
 	const mode = options.mode || 'summarizer';
-	const noFileModes = ['email', 'generator'];
+	const noFileModes = ['email', 'generator', 'security'];
 	
-	// For modes that don't require files, we can work without a directory
+	// Handle security mode with system scanning
+	if (mode === 'security') {
+		console.log('[summarizer] Running security analysis...');
+		try {
+			const systemInfo = await gatherSystemInfo();
+			const riskAnalysis = analyzeSecurityRisks(systemInfo);
+			
+			// Create security documents for AI analysis
+			const securityDocs = [
+				{
+					rel: 'system-info.json',
+					text: JSON.stringify(systemInfo, null, 2)
+				},
+				{
+					rel: 'risk-analysis.json', 
+					text: JSON.stringify(riskAnalysis, null, 2)
+				}
+			];
+			
+			const res = await summarizeWithProvider(PROVIDER, userPrompt, securityDocs, mode);
+			if (res && res.error) {
+				return { ok: false, error: res.error, fileCount: 0 };
+			}
+			return {
+				ok: true,
+				fileCount: 2,
+				tokens: res.tokens || 0,
+				output: res.output,
+				securityScore: riskAnalysis.securityScore,
+				riskLevel: riskAnalysis.riskLevel
+			};
+		} catch (error) {
+			console.error('[summarizer] Security analysis failed:', error);
+			return { ok: false, error: `Security analysis failed: ${error.message}`, fileCount: 0 };
+		}
+	}
+	
+	// Handle health mode with Fitbit data analysis
+	if (mode === 'health') {
+		console.log('[summarizer] Running health coaching analysis...');
+		try {
+			if (!dirPath || !fs.existsSync(dirPath)) {
+				return { ok: false, error: "Please select your Fitbit data folder." };
+			}
+			
+			const healthAnalysis = await analyzeHealthData(dirPath);
+			if (!healthAnalysis.success) {
+				return { ok: false, error: `Health analysis failed: ${healthAnalysis.error}` };
+			}
+			
+			// Create health coaching documents for AI analysis
+			const healthDocs = [
+				{
+					rel: 'health-metrics.json',
+					text: JSON.stringify(healthAnalysis.data, null, 2)
+				},
+				{
+					rel: 'coaching-data.json',
+					text: JSON.stringify(healthAnalysis.data.coachingData, null, 2)
+				}
+			];
+			
+			const res = await summarizeWithProvider(PROVIDER, userPrompt, healthDocs, mode);
+			if (res && res.error) {
+				return { ok: false, error: res.error, fileCount: 0 };
+			}
+			
+			return {
+				ok: true,
+				fileCount: 2,
+				tokens: res.tokens || 0,
+				output: res.output,
+				healthMetrics: healthAnalysis.data.metrics,
+				recovery: healthAnalysis.data.recovery,
+				coachingData: healthAnalysis.data.coachingData
+			};
+		} catch (error) {
+			console.error('[summarizer] Health coaching analysis failed:', error);
+			return { ok: false, error: `Health analysis failed: ${error.message}`, fileCount: 0 };
+		}
+	}
+	
+	// For other modes that don't require files, we can work without a directory
 	if (noFileModes.includes(mode) && !dirPath) {
 		const res = await summarizeWithProvider(PROVIDER, userPrompt, [], mode);
 		if (res && res.error) {
