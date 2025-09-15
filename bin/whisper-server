@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Persistent Whisper Server - keeps model loaded in memory
+# Usage: whisper-server [model_path]
+
+MODEL_PATH="$1"
+if [[ -z "$MODEL_PATH" ]]; then
+    # Default to the most commonly available model
+    if [[ -f "/Volumes/Mac-backup/Documents/models/ggml-small.en.bin" ]]; then
+        MODEL_PATH="/Volumes/Mac-backup/Documents/models/ggml-small.en.bin"
+    elif [[ -f "/Volumes/Mac-backup/Documents/models/ggml-base.en.bin" ]]; then
+        MODEL_PATH="/Volumes/Mac-backup/Documents/models/ggml-base.en.bin"
+    else
+        echo "Error: No Whisper model found" >&2
+        exit 1
+    fi
+fi
+
+if [[ ! -f "$MODEL_PATH" ]]; then
+    echo "Error: Model file not found: $MODEL_PATH" >&2
+    exit 1
+fi
+
+echo "Starting Whisper server with model: $MODEL_PATH" >&2
+
+# Create temp directory for audio chunks
+TEMP_DIR="/tmp/whisper_chunks_$$"
+mkdir -p "$TEMP_DIR"
+
+# Cleanup on exit
+trap 'rm -rf "$TEMP_DIR"; exit' INT TERM EXIT
+
+# Start the server loop
+while IFS= read -r file_path; do
+    if [[ -f "$file_path" ]]; then
+        # Process with optimized settings for speed
+        "$(dirname "$0")/whisper-cli-original" \
+            --model "$MODEL_PATH" \
+            --language "en" \
+            --file "$file_path" \
+            --threads "8" \
+            --best-of "1" \
+            --beam-size "1" \
+            --temperature "0.0" \
+            --word-thold "0.005" \
+            --entropy-thold "4.0" \
+            --no-timestamps \
+            --no-fallback \
+            --prompt "analyze sleep patterns fitbit health data" 2>/dev/null
+        echo "---CHUNK_END---"
+    fi
+done

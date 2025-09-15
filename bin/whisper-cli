@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Optimized Whisper-CLI wrapper for better accuracy with technical terms
+# Usage: whisper-cli-optimized [original args...]
+
+# Extract model and file from arguments
+MODEL=""
+FILE=""
+OTHER_ARGS=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --model|-m)
+            MODEL="$2"
+            shift 2
+            ;;
+        --file|-f)
+            FILE="$2"
+            shift 2
+            ;;
+        *)
+            OTHER_ARGS="$OTHER_ARGS $1"
+            shift
+            ;;
+    esac
+done
+
+# If no model specified, prioritize speed + accuracy balance
+if [[ -z "$MODEL" ]]; then
+    if [[ -f "/Volumes/Mac-backup/Documents/models/ggml-small.en.bin" ]]; then
+        MODEL="/Volumes/Mac-backup/Documents/models/ggml-small.en.bin"
+    elif [[ -f "/Volumes/Mac-backup/Documents/models/ggml-medium.en.bin" ]]; then
+        MODEL="/Volumes/Mac-backup/Documents/models/ggml-medium.en.bin"
+    elif [[ -f "/Volumes/Mac-backup/Documents/models/ggml-medium.bin" ]]; then
+        MODEL="/Volumes/Mac-backup/Documents/models/ggml-medium.bin"
+    elif [[ -f "/Volumes/Mac-backup/Documents/models/ggml-base.en.bin" ]]; then
+        MODEL="/Volumes/Mac-backup/Documents/models/ggml-base.en.bin"
+    elif [[ -f "/Volumes/Mac-backup/Documents/models/ggml-base.bin" ]]; then
+        MODEL="/Volumes/Mac-backup/Documents/models/ggml-base.bin"
+    else
+        MODEL="/Volumes/Mac-backup/Documents/models/ggml-small.bin"
+    fi
+fi
+
+# Single-pass transcription optimized for longer audio
+exec "$(dirname "$0")/whisper-cli-lucidtalk" \
+    --model "$MODEL" \
+    --language "en" \
+    --file "$FILE" \
+    --threads "8" \
+    --best-of "1" \
+    --beam-size "1" \
+    --temperature "0.0" \
+    --no-timestamps \
+    --no-fallback \
+    $OTHER_ARGS

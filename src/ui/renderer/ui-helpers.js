@@ -69,4 +69,14 @@ export function showControlsView() {
   controls?.classList.remove("hidden");
   statusEl && (statusEl.textContent = "Idle");
   spinnerEl?.classList.remove("show");
+  
+  // Clear voice transcript when returning to controls
+  clearVoiceTranscript();
+}
+
+export function clearVoiceTranscript() {
+  const liveTranscriptEl = document.getElementById('liveTranscript');
+  if (liveTranscriptEl) {
+    liveTranscriptEl.textContent = '';
+  }
 }

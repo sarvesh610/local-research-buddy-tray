@@ -3,7 +3,7 @@ import path from "path";
 import fg from "fast-glob";
 import OpenAI from "openai";
 import { gatherSystemInfo, analyzeSecurityRisks } from "./security-scanner.js";
-import { analyzeHealthData } from "./health-analyzer.js";
+import { analyzeHealthData } from "../utils/health-analyzer.js";
 
 // AI Provider Configuration - Ready for Qvac SDK
 const PROVIDER = process.env.AI_PROVIDER || "openai";

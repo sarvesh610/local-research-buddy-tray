@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync, existsSync, statSync } from 'fs';
 import { join, isAbsolute } from 'path';
-import { summarizeDirectory } from '../summarizer.js';
+import { summarizeDirectory } from '../core/summarizer.js';
 
 // Remember the most recent directory used by list_files/summarize_dir
 let lastDirectory = null;
@@ -13,6 +13,46 @@ function expandHomeDir(p) {
 }
 
 export const tools = {
+  analyze_fitbit_data: {
+    desc: "Analyze Fitbit health data for sleep patterns, activity metrics, and personalized health coaching",
+    schema: { prompt: "string?" },
+    run: async ({ prompt = "Analyze my Fitbit data and provide health insights" }) => {
+      // Use the known Fitbit data location
+      const fitbitDir = expandHomeDir('~/Downloads/Takeout/Fitbit');
+      
+      if (!existsSync(fitbitDir)) {
+        return { 
+          error: "Fitbit data not found at ~/Downloads/Takeout/Fitbit/",
+          suggestion: "Please ensure your Fitbit Takeout export is extracted to Downloads/Takeout/ folder"
+        };
+      }
+      
+      // Check for Global Export Data subfolder
+      const globalExportPath = join(fitbitDir, 'Global Export Data');
+      if (!existsSync(globalExportPath)) {
+        return {
+          error: "Global Export Data folder not found in Fitbit directory",
+          suggestion: "Please ensure the Fitbit export contains the 'Global Export Data' subfolder"
+        };
+      }
+      
+      console.log(`[analyze_fitbit_data] Using Fitbit data from: ${fitbitDir}`);
+      
+      const res = await summarizeDirectory(fitbitDir, prompt, { mode: 'health' });
+      if (!res.ok) {
+        throw new Error(res.error || "Fitbit analysis failed");
+      }
+      
+      return { 
+        analysis: (res.output || "").slice(0, 8000), 
+        healthMetrics: res.healthMetrics || {},
+        recovery: res.recovery || {},
+        coachingData: res.coachingData || {},
+        dataLocation: fitbitDir
+      };
+    }
+  },
+
   summarize_dir: {
     desc: "Analyze and summarize documents in a directory with optional user prompt",
     schema: { dir: "string", prompt: "string?", include: "object?", mode: "string?" },

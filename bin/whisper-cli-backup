@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Optimized Whisper-CLI wrapper for better accuracy with technical terms
+# Usage: whisper-cli-optimized [original args...]
+
+# Extract model and file from arguments
+MODEL=""
+FILE=""
+OTHER_ARGS=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --model|-m)
+            MODEL="$2"
+            shift 2
+            ;;
+        --file|-f)
+            FILE="$2"
+            shift 2
+            ;;
+        *)
+            OTHER_ARGS="$OTHER_ARGS $1"
+            shift
+            ;;
+    esac
+done
+
+# If no model specified, use base model for accuracy
+if [[ -z "$MODEL" ]]; then
+    if [[ -f "/Users/sarveshnaidu/Documents/models/ggml-base.bin" ]]; then
+        MODEL="/Users/sarveshnaidu/Documents/models/ggml-base.bin"
+    else
+        MODEL="/Users/sarveshnaidu/Documents/models/ggml-small.bin"
+    fi
+fi
+
+# Optimized arguments for technical speech recognition
+exec "$(dirname "$0")/whisper-cli" \
+    --model "$MODEL" \
+    --language "en" \
+    --file "$FILE" \
+    --threads "6" \
+    --best-of "5" \
+    --beam-size "8" \
+    --temperature "0.0" \
+    --word-thold "0.3" \
+    --entropy-thold "2.0" \
+    --no-timestamps \
+    --prompt "Technical commands: analyze test folder documents summarize" \
+    $OTHER_ARGS

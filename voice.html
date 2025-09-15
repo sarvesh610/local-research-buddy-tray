@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Research Buddy - Voice Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="src/ui/voice/voice-input.css">
+    <style>
+        :root { --bg:#0a0b10; --fg:#e9ecf4; --muted:#98a2b3; --accent:#22c55e; --accent-2:#86efac; }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            background: radial-gradient(800px 400px at 50% -10%, rgba(34,197,94,0.12), transparent), linear-gradient(180deg, #0f1322, #0b0f1b);
+            min-height: 100vh;
+            font-family: 'Orbitron', -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+            color: var(--fg);
+        }
+        
+        .app-header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .app-title { color: var(--fg); font-size: 1.1rem; font-weight: 700; letter-spacing: 0.06em; display:inline-flex; align-items:center; gap:8px; }
+        .app-title .title-icon svg { width:18px; height:18px; display:block; }
+        .title-icon .ring { stroke: var(--accent); stroke-width:1.6; fill:none; opacity:0.9; }
+        .title-icon .mic { stroke: var(--accent-2); stroke-width:1.6; fill:none; }
+        
+        .app-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .control-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(10px);
+            color: var(--fg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(34,197,94,0.25);
+        }
+        
+        .control-btn:hover { background: rgba(34,197,94,0.18); border-color: rgba(34,197,94,0.4); }
+        
+        .control-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+        
+        .voice-container {
+            position: relative;
+            width: 100%;
+            min-height: 100vh;
+            padding-top: 80px; /* Account for header */
+        }
+        
+        .mode-switch {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .mode-btn {
+            padding: 0.75rem 1.5rem;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(34,197,94,0.25);
+            border-radius: 2rem;
+            color: var(--fg);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+        
+        .mode-btn:hover { background: rgba(34,197,94,0.16); border-color: rgba(34,197,94,0.4); transform: translateY(-2px); }
+        
+        .mode-btn.active { background: rgba(34,197,94,0.24); border-color: rgba(34,197,94,0.5); }
+    </style>
+</head>
+<body>
+    <div class="app-header">
+        <div class="app-title"><span class="title-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" class="ring" /><path d="M12 6c.83 0 1.5.67 1.5 1.5v5a1.5 1.5 0 1 1-3 0v-5C10.5 6.67 11.17 6 12 6z" class="mic"/></svg></span>Voice Agent</div>
+        <div class="app-controls">
+            <button class="control-btn" id="minimizeBtn" title="Minimize">
+                <svg viewBox="0 0 24 24">
+                    <path d="M20 14H4v-4h16"/>
+                </svg>
+            </button>
+            <button class="control-btn" id="closeBtn" title="Close">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="voice-container">
+        <div id="voiceInterface"></div>
+    </div>
+    
+    <div class="mode-switch">
+        <a href="renderer.html" class="mode-btn">📁 File Mode</a>
+        <a href="voice.html" class="mode-btn active">🎙️ Voice Mode</a>
+    </div>
+
+    <script type="module">
+        import { VoiceInput } from './src/ui/voice/voice-input.js';
+        
+        // Initialize voice interface
+        const voiceContainer = document.getElementById('voiceInterface');
+        const voiceInput = new VoiceInput(voiceContainer);
+        
+        // Window controls
+        document.getElementById('minimizeBtn').addEventListener('click', () => {
+            window.api?.minimize();
+        });
+        
+        document.getElementById('closeBtn').addEventListener('click', () => {
+            window.api?.close();
+        });
+        
+        // Debug info
+        console.log('[voice-app] Voice interface initialized');
+        console.log('[voice-app] Available APIs:', {
+            electronAPI: !!window.electronAPI,
+            api: !!window.api
+        });
+        
+        // Global error handling
+        window.addEventListener('error', (event) => {
+            console.error('[voice-app] Global error:', event.error);
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('[voice-app] Unhandled promise rejection:', event.reason);
+        });
+    </script>
+</body>
+</html>

@@ -30,14 +30,17 @@
       "*.js",
       "*.cjs",
       "*.html",
-      "agent/**/*",
-      "js/**/*",
+      "src/**/*",
       "*.png",
       "package.json",
       "!**/*.map",
-      "!**/test/**"
+      "!**/test/**",
+      "!**/node_modules/**"
     ],
     "asar": true,
+    "asarUnpack": [
+      "src/voice/whisper-binary/**"
+    ],
     "mac": {
       "target": ["dmg"],
       "category": "public.app-category.productivity"

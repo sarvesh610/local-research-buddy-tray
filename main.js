@@ -143,6 +143,26 @@ app.on("activate", () => {
 	}
 });
 
+// Lightweight check for presence of voice transcription binary
+ipcMain.handle("voice:available", async () => {
+    try {
+        const possible = [
+            path.join(process.cwd(), 'src/voice/whisper-binary/LucidTalkStreamer'),
+            path.join(app.getAppPath(), 'src/voice/whisper-binary/LucidTalkStreamer'),
+            path.join(process.resourcesPath || '', 'app.asar.unpacked/src/voice/whisper-binary/LucidTalkStreamer')
+        ].filter(Boolean);
+        for (const p of possible) {
+            try {
+                const st = fs.statSync(p);
+                if (st.isFile()) return { available: true, path: p };
+            } catch {}
+        }
+        return { available: false };
+    } catch (e) {
+        return { available: false, error: e?.message };
+    }
+});
+
 ipcMain.handle("pick-dir", async () => {
 	console.log("[ipc] pick-dir invoked");
 	const result = await dialog.showOpenDialog(win, {
@@ -153,8 +173,9 @@ ipcMain.handle("pick-dir", async () => {
 	return result.filePaths[0];
 });
 
-import { summarizeDirectory } from "./summarizer.js";
-import { runAgent } from "./agent/agent.js";
+import { summarizeDirectory } from "./src/core/summarizer.js";
+import { runAgent } from "./src/agent/agent.js";
+import { voiceManager } from "./src/voice/transcription-manager.js";
 
 ipcMain.handle("run-summary", async (_evt, payload) => {
 	const { dirPath, userPrompt, options } = payload || {};
@@ -187,17 +208,140 @@ ipcMain.handle("run-summary", async (_evt, payload) => {
 	}
 });
 
+
+ipcMain.handle("app/minimize", () => {
+	if (win) win.minimize();
+});
+ipcMain.handle("app/close", () => {
+	if (win) win.hide();
+});
+ipcMain.handle("app/toggle-pin", () => {
+	if (!win) return false;
+	const newVal = !win.isAlwaysOnTop();
+	win.setAlwaysOnTop(newVal, "screen-saver");
+	return newVal;
+});
+
+// Voice Integration IPC Handlers
+ipcMain.handle("voice:start", async (_evt, options = {}) => {
+	console.log("[ipc] voice:start invoked with options:", options);
+	
+	try {
+		// Resolve default Whisper model path if not provided
+		let modelPath = options.modelPath || process.env.WHISPER_MODEL_PATH || process.env.WHISPER_MODEL;
+        if (!modelPath) {
+            const candidates = [
+                path.join(app.getPath('documents'), 'models/ggml-base.en.bin'),
+                path.join(app.getPath('documents'), 'models/ggml-small.en.bin'),
+                path.join(app.getPath('documents'), 'models/ggml-base.bin'),
+                path.join(app.getPath('documents'), 'models/ggml-small.bin'),
+                path.join(process.cwd(), 'src/voice/models/ggml-base.en.bin'),
+                path.join(process.cwd(), 'src/voice/models/ggml-small.en.bin'),
+                path.join(process.cwd(), 'src/voice/models/ggml-base.bin'),
+                path.join(process.cwd(), 'src/voice/models/ggml-small.bin')
+            ];
+			for (const c of candidates) {
+				try { if (fs.existsSync(c)) { modelPath = c; break; } } catch {}
+			}
+		}
+		const startOpts = { ...options, ...(modelPath ? { modelPath } : {}) };
+		if (modelPath) console.log('[voice] Using Whisper model:', modelPath);
+		else console.warn('[voice] No Whisper model path resolved. The streamer may fail to start.');
+		await voiceManager.startVoiceInput(startOpts);
+		
+		// Set up voice event forwarding to renderer
+		const forwardVoiceEvent = (eventType, data) => {
+			if (win && !win.isDestroyed()) {
+				win.webContents.send("voice:event", { type: eventType, data });
+			}
+		};
+		
+		// Forward voice events to renderer
+		voiceManager.on('voice:transcription', (data) => forwardVoiceEvent('transcription', data));
+		voiceManager.on('voice:status', (data) => forwardVoiceEvent('status', data));
+		voiceManager.on('voice:error', (error) => forwardVoiceEvent('error', { message: error.message }));
+		voiceManager.on('voice:stopped', (data) => forwardVoiceEvent('stopped', data));
+		
+		// Handle voice commands and forward to agent
+		voiceManager.on('voice:command', async (commandData) => {
+			console.log("[voice] Processing voice command:", commandData.transcript);
+			
+			try {
+				// Process voice command through agent
+				const agentResult = await runAgent({
+					messages: [{ role: 'user', content: commandData.transcript }],
+					maxSteps: 6
+				});
+				
+				// Forward agent response to renderer
+				if (win && !win.isDestroyed()) {
+					win.webContents.send("agent:response", {
+						final: agentResult.final || "No response generated.",
+						steps: agentResult.steps,
+						success: agentResult.ok
+					});
+				}
+				
+			} catch (error) {
+				console.error("[voice] Agent processing failed:", error);
+				if (win && !win.isDestroyed()) {
+					win.webContents.send("agent:response", {
+						final: `Error processing command: ${error.message}`,
+						steps: 0,
+						success: false
+					});
+				}
+			}
+		});
+		
+		return { success: true };
+		
+	} catch (error) {
+		console.error("[ipc] voice:start failed:", error);
+		return { success: false, error: error.message };
+	}
+});
+
+ipcMain.handle("voice:stop", async (_evt) => {
+	console.log("[ipc] voice:stop invoked");
+	
+	try {
+		const result = await voiceManager.stopVoiceInput();
+		const finalTranscript = voiceManager.getFinalTranscript();
+		
+		// Remove all listeners to prevent memory leaks
+		voiceManager.removeAllListeners();
+		
+		return { 
+			success: true, 
+			finalTranscript,
+			transcripts: result?.transcripts || []
+		};
+		
+	} catch (error) {
+		console.error("[ipc] voice:stop failed:", error);
+		return { success: false, error: error.message };
+	}
+});
+
+ipcMain.handle("voice:status", async (_evt) => {
+	return voiceManager.getVoiceStatus();
+});
+
+// Enhanced agent handler to support voice integration
 ipcMain.handle("agent:run", async (_evt, payload) => {
-	const { dirPath, userPrompt, maxSteps = 6 } = payload || {};
+	const { messages, maxSteps = 6, dirPath, userPrompt } = payload || {};
 	console.log("[ipc] agent:run payload:", {
-		dirPath,
+		messagesCount: messages?.length || 0,
 		userPromptLen: (userPrompt || "").length,
+		dirPath,
 		maxSteps,
 	});
 	console.time("[ipc] agent:run time");
 	
 	try {
-		const messages = [
+		// Use provided messages or construct from userPrompt
+		const agentMessages = messages || [
 			{ 
 				role: 'user', 
 				content: `Task: ${userPrompt || 'Analyze this directory for key themes and findings.'}
@@ -209,7 +353,7 @@ Provide a final answer with specific citations and actionable insights.`
 		];
 
 		const result = await runAgent({ 
-			messages, 
+			messages: agentMessages, 
 			maxSteps 
 		});
 		
@@ -236,19 +380,6 @@ Provide a final answer with specific citations and actionable insights.`
 			steps: 0
 		};
 	}
-});
-
-ipcMain.handle("app/minimize", () => {
-	if (win) win.minimize();
-});
-ipcMain.handle("app/close", () => {
-	if (win) win.hide();
-});
-ipcMain.handle("app/toggle-pin", () => {
-	if (!win) return false;
-	const newVal = !win.isAlwaysOnTop();
-	win.setAlwaysOnTop(newVal, "screen-saver");
-	return newVal;
 });
 
 function getTrayImage() {
